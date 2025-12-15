@@ -1,0 +1,43 @@
+# Run with:
+# docker compose -f docker/docker-compose.yml up --build -d
+
+# docker run --network=host --gpus all -e NVIDIA_DRIVER_CAPABILITIES=all --name evo_env -it evo_env:latest
+services:
+  maniflow_env:
+    image: maniflow_env
+    container_name: maniflow_env
+    build:
+      # 用来指定能打包进去的目录(根目录)，然后再运行根目录下的scripts/docker/serve_policy.Dockerfile，可不受当前工作目录影响。
+      # context: ../..
+      dockerfile: Dockerfile
+    privileged: true                       
+    # entrypoint: ["/sbin/init"]    
+    working_dir: /root/workspace/ManiFlow_Policy
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+      - ACCEPT_EULA=Y
+      - PRIVACY_CONSENT=Y
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - container=docker                   
+    volumes:
+      - ~/workspace/:/root/workspace
+      - /mnt/inaisfs/manip-asset-gpfs:/mnt/inaisfs/manip-asset-gpfs
+      - /mnt/manip-asset-shanghai:/mnt/manip-asset-shanghai
+      - "~/.Xauthority:/root/.Xauthority"
+      - /tmp:/tmp
+      - /dev:/dev
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw  
+    tmpfs:
+      - /run                                
+      - /run/lock
+    network_mode: host
+    # runtime: nvidia
+    shm_size: '32gb'
+    ulimits:
+      memlock: -1
+    tty: true
+    stdin_open: true
+    gpus: all
+    ipc: host
