@@ -41,7 +41,7 @@ def remove_language_head(state_dict):
             del state_dict[key]
     return state_dict
 
-def load_r3m(modelid, pretrained=True):
+def load_r3m(modelid):
     home = os.path.join(expanduser("~"), ".r3m")
     if modelid == "resnet50":
         foldername = "r3m_50"
@@ -60,7 +60,6 @@ def load_r3m(modelid, pretrained=True):
 
     if not os.path.exists(os.path.join(home, foldername)):
         os.makedirs(os.path.join(home, foldername))
-        
     modelpath = os.path.join(home, foldername, "model.pt")
     configpath = os.path.join(home, foldername, "config.yaml")
     if not os.path.exists(modelpath):
@@ -71,10 +70,9 @@ def load_r3m(modelid, pretrained=True):
     cleancfg = cleanup_config(modelcfg)
     rep = hydra.utils.instantiate(cleancfg)
     
-    if pretrained:
-        rep = torch.nn.DataParallel(rep)
-        r3m_state_dict = remove_language_head(torch.load(modelpath, map_location=torch.device(device))['r3m'])
-        rep.load_state_dict(r3m_state_dict)
+    rep = torch.nn.DataParallel(rep)
+    r3m_state_dict = remove_language_head(torch.load(modelpath, map_location=torch.device(device))['r3m'])
+    rep.load_state_dict(r3m_state_dict)
     return rep
 
 def load_r3m_reproduce(modelid):
@@ -87,11 +85,11 @@ def load_r3m_reproduce(modelid):
         foldername = "original_r3m_noaug"
         modelurl = 'https://drive.google.com/uc?id=1k_ZlVtvlktoYLtBcfD0aVFnrZcyCNS9D'
         configurl = 'https://drive.google.com/uc?id=1hPmJwDiWPkd6GGez6ywSC7UOTIX7NgeS'
-    elif modelif == "r3m_nol1":
+    elif modelid == "r3m_nol1":
         foldername = "original_r3m_nol1"
         modelurl = 'https://drive.google.com/uc?id=1LpW3aBMdjoXsjYlkaDnvwx7q22myM_nB'
         configurl = 'https://drive.google.com/uc?id=1rZUBrYJZvlF1ReFwRidZsH7-xe7csvab'
-    elif modelif == "r3m_nolang":
+    elif modelid == "r3m_nolang":
         foldername = "original_r3m_nolang"
         modelurl = 'https://drive.google.com/uc?id=1FXcniRei2JDaGMJJ_KlVxHaLy0Fs_caV'
         configurl = 'https://drive.google.com/uc?id=192G4UkcNJO4EKN46ECujMcH0AQVhnyQe'

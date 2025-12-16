@@ -88,6 +88,15 @@ class TimmObsEncoder(ModuleAttrMixin):
         if model_name == "r3m":
             from r3m import load_r3m
             model = load_r3m("resnet18", pretrained=pretrained) # resnet18, resnet34
+
+            # # change model params
+            # model = load_r3m("resnet18")
+            # if torch.cuda.is_available():
+            #     if isinstance(model, nn.DataParallel):
+            #         model.module = model.module.to("cuda:0")
+            #     model = model.to("cuda:0")
+            # # -------------------
+
             model.eval()
             cprint(f"Loaded R3M model using {model_name}. pretrained={pretrained}", 'green')
         else:
@@ -166,6 +175,14 @@ class TimmObsEncoder(ModuleAttrMixin):
                 rgb_keys.append(key)
 
                 this_model = model if share_rgb_model else copy.deepcopy(model)
+
+                # change device later
+                # if model_name.startswith('r3m') and torch.cuda.is_available():
+                #     if isinstance(this_model, nn.DataParallel):
+                #         this_model.module = this_model.module.to("cuda:0")
+                #     this_model = this_model.to("cuda:0")
+                # # -------------------
+
                 key_model_map[key] = this_model
 
                 this_transform = transform
@@ -301,6 +318,17 @@ class TimmObsEncoder(ModuleAttrMixin):
             assert img.shape[1:] == self.key_shape_map[key]
             img = self.key_transform_map[key](img).to(self.device)
             raw_feature = self.key_model_map[key](img).to(self.device)
+
+            # # change device
+            # model = self.key_model_map[key]
+            # if isinstance(model, nn.DataParallel):
+            #     target_device = next(model.module.parameters()).device
+            # else:
+            #     target_device = next(model.parameters()).device
+            # img = self.key_transform_map[key](img).to(target_device)
+            # raw_feature = model(img).to(target_device)
+            # # -------------
+
             feature = self.aggregate_feature(raw_feature)
             assert len(feature.shape) == 2 and feature.shape[0] == B * T
             features.append(feature.reshape(B, -1))
@@ -312,6 +340,22 @@ class TimmObsEncoder(ModuleAttrMixin):
             assert B == batch_size
             assert data.shape[2:] == self.key_shape_map[key]
             features.append(data.reshape(B, -1))
+        
+        # # change device
+        # target_device = self.device
+        # if self.rgb_keys:
+        #     first_model = self.key_model_map[self.rgb_keys[0]]
+        #     if isinstance(first_model, nn.DataParallel):
+        #         target_device = next(first_model.module.parameters()).device
+        #     else:
+        #         target_device = next(first_model.parameters()).device
+        # for key in self.low_dim_keys:
+        #     data = obs_dict[key].to(target_device)
+        #     B, T = data.shape[:2]
+        #     assert B == batch_size
+        #     assert data.shape[2:] == self.key_shape_map[key]
+        #     features.append(data.reshape(B, -1))
+        # # --------------
         
         # concatenate all features
         result = torch.cat(features, dim=-1)
@@ -330,6 +374,18 @@ class TimmObsEncoder(ModuleAttrMixin):
                 dtype=self.dtype,
                 device=self.device)
             example_obs_dict[key] = this_obs
+
+        # # change device temporarily
+        # target_device = torch.device("cuda:0") if torch.cuda.is_available() else self.device
+        # for key, attr in obs_shape_meta.items():
+        #     shape = tuple(attr['shape'])
+        #     this_obs = torch.zeros(
+        #         (1, attr['horizon']) + shape, 
+        #         dtype=self.dtype,
+        #         device=target_device)
+        #     example_obs_dict[key] = this_obs
+        # # -------------------------
+        
         example_output = self.forward(example_obs_dict)
         assert len(example_output.shape) == 2
         assert example_output.shape[0] == 1

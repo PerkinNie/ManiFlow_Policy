@@ -12,7 +12,7 @@ seed=${6}
 gpu_id=${7}
 
 exp_name=${task_name}-${alg_name}-${addition_info}
-run_dir="data/outputs/${exp_name}_seed${seed}"
+run_dir="data/outputs/${exp_name}_seed${seed}"  # 训练checkpoint和日志保存路径
 
 
 

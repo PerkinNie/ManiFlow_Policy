@@ -5,6 +5,8 @@
 # bash train_eval_robotwin2.sh lift_pot maniflow_image_timm_policy_robotwin2 demo_randomized 50 1112 0 0
 # bash train_eval_robotwin2.sh lift_pot maniflow_image_transformer_policy_robotwin2 demo_randomized 50 1112 0 0
 
+# efort task examples:
+# bash train_eval_robotwin2.sh blocks_ranking_size maniflow_image_timm_policy_robotwin2 efort 400 1112 0 0
 
 train=true
 eval=true
