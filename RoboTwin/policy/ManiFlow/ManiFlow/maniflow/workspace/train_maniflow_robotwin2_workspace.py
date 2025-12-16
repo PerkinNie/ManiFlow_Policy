@@ -51,7 +51,7 @@ sys.path.append('ManiFlow/maniflow')
 
 
 from hydra.core.hydra_config import HydraConfig
-from maniflow.policy.maniflow_pointcloud_policy import ManiFlowTransformerPointcloudPolicy
+from maniflow.policy.maniflow_image_policy import ManiFlowTransformerImagePolicy
 from maniflow.dataset.base_dataset import BaseDataset
 from maniflow.env_runner.robot_runner import RobotRunner
 from maniflow.common.checkpoint_util import TopKCheckpointManager
@@ -77,9 +77,9 @@ class TrainManiFlowRoboTwinWorkspace:
         random.seed(seed)
 
         # configure model
-        self.model: ManiFlowTransformerPointcloudPolicy = hydra.utils.instantiate(cfg.policy)
+        self.model: ManiFlowTransformerImagePolicy = hydra.utils.instantiate(cfg.policy)
 
-        self.ema_model: ManiFlowTransformerPointcloudPolicy = None
+        self.ema_model: ManiFlowTransformerImagePolicy = None
         if cfg.training.use_ema:
             try:
                 self.ema_model = copy.deepcopy(self.model)
