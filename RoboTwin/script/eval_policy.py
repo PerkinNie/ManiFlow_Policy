@@ -18,8 +18,9 @@ from datetime import datetime
 import importlib
 import argparse
 import pdb
+import torch
 
-from generate_episode_instructions import *
+from description.utils.generate_episode_instructions import *
 
 current_file_path = os.path.abspath(__file__)
 parent_directory = os.path.dirname(current_file_path)
@@ -360,6 +361,46 @@ def parse_args_and_config():
         config.update(overrides)
 
     return config
+
+
+def stack_last_n_obs(self, all_obs, n_steps):
+    assert(len(all_obs) > 0)
+    all_obs = list(all_obs)
+    # numpy array
+    if isinstance(all_obs[0], np.ndarray):
+        result = np.zeros((n_steps,) + all_obs[-1].shape,
+            dtype=all_obs[-1].dtype)
+        start_idx = -min(n_steps, len(all_obs))
+        result[start_idx:] = np.array(all_obs[start_idx:])
+        if n_steps > len(all_obs):
+            result[:start_idx] = result[start_idx]
+    # torch tensor
+    elif isinstance(all_obs[0], torch.Tensor):
+        result = torch.zeros((n_steps,) + all_obs[-1].shape,
+            dtype=all_obs[-1].dtype)
+        start_idx = -min(n_steps, len(all_obs))
+        result[start_idx:] = torch.stack(all_obs[start_idx:])
+        if n_steps > len(all_obs):
+            result[:start_idx] = result[start_idx]
+    # support str
+    elif isinstance(all_obs[0], str):
+        return all_obs * n_steps
+    # support list/tuple by converting to numpy (e.g., lists of numbers, lists of arrays)
+    elif isinstance(all_obs[0], (list, tuple)):
+        try:
+            last_arr = np.asarray(all_obs[-1])
+            result = np.zeros((n_steps,) + last_arr.shape,
+                              dtype=last_arr.dtype)
+            start_idx = -min(n_steps, len(all_obs))
+            stacked = np.stack([np.asarray(x) for x in all_obs[start_idx:]])
+            result[start_idx:] = stacked
+            if n_steps > len(all_obs):
+                result[:start_idx] = result[start_idx]
+        except Exception as e:
+            raise RuntimeError(f'Failed to convert list/tuple obs to ndarray: {e}')
+    else:
+        raise RuntimeError(f'Unsupported obs type {type(all_obs[0])}')
+    return result
 
 
 if __name__ == "__main__":

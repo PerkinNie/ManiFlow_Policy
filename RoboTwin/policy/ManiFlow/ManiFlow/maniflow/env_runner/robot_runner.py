@@ -69,6 +69,18 @@ class RobotRunner(BaseRunner):
         # support str
         elif isinstance(all_obs[0], str):
             return all_obs * n_steps
+        elif isinstance(all_obs[0], (list, tuple)):
+            try:
+                last_arr = np.asarray(all_obs[-1])
+                result = np.zeros((n_steps,) + last_arr.shape,
+                                dtype=last_arr.dtype)
+                start_idx = -min(n_steps, len(all_obs))
+                stacked = np.stack([np.asarray(x) for x in all_obs[start_idx:]])
+                result[start_idx:] = stacked
+                if n_steps > len(all_obs):
+                    result[:start_idx] = result[start_idx]
+            except Exception as e:
+                raise RuntimeError(f'Failed to convert list/tuple obs to ndarray: {e}')
         else:
             raise RuntimeError(f'Unsupported obs type {type(all_obs[0])}')
         return result

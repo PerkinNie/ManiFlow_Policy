@@ -6,9 +6,9 @@
 # bash train_eval_robotwin2.sh lift_pot maniflow_image_transformer_policy_robotwin2 demo_randomized 50 1112 0 0
 
 # efort task examples:
-# bash train_eval_robotwin2.sh blocks_ranking_size maniflow_image_timm_policy_robotwin2 efort 400 1112 0 0
+# bash train_eval_robotwin2.sh blocks_ranking_size maniflow_image_timm_policy_robotwin2 efort 400 1207 0 0
 
-train=true
+train=false
 eval=true
 train_task_config=${3} # setting for training, demo_clean or demo_randomized, add here for clarity
 eval_task_config=demo_randomized # setting for evaluation, demo_clean or demo_randomized
@@ -52,12 +52,13 @@ echo -e "\033[33mgpu id (to use): ${gpu_id}\033[0m"
 
 cd ../.. # move to root
 
+
 PYTHONWARNINGS=ignore::UserWarning \
 python script/eval_policy.py --config policy/$policy_name/deploy_policy.yml \
     --overrides \
     --config_name ${alg_name} \
     --task_name ${task_name} \
-    --task_config ${eval_task_config} \
+    --task_config ${task_config} \
     --ckpt_setting ${ckpt_setting} \
     --expert_data_num ${expert_data_num} \
     --training_seed ${seed} \
