@@ -25,12 +25,21 @@ def load_hdf5(dataset_path):
             root["/joint_action/right_arm"][()],
         )
         vector = root["/joint_action/vector"][()]
-        pointcloud = root["/pointcloud"][()]
+        # pointcloud = root["/pointcloud"][()]
         image_dict = dict()
-        for cam_name in root[f"/observation/"].keys():
-            image_dict[cam_name] = root[f"/observation/{cam_name}/rgb"][()]
+        # for cam_name in root[f"/observation/"].keys():
+        #     image_dict[cam_name] = root[f"/observation/{cam_name}/rgb"][()]
 
-    return left_gripper, left_arm, right_gripper, right_arm, vector, pointcloud, image_dict
+        # 针对第三人称视角图像的修改
+        if "/third_view_rgb" in root:
+            third_view_rgb = root["/third_view_rgb"][()]  # (65,) |S14705
+            image_dict["third_view"] = third_view_rgb
+        else:
+            image_dict["third_view"] = np.array([])
+
+    # return left_gripper, left_arm, right_gripper, right_arm, vector, pointcloud, image_dict
+    return left_gripper, left_arm, right_gripper, right_arm, vector, image_dict
+
 
 
 def main():
@@ -86,21 +95,27 @@ def main():
             right_gripper_all,
             right_arm_all,
             vector_all,
-            pointcloud_all,
+            # pointcloud_all,
             image_dict_all,
         ) = load_hdf5(load_path)
 
         for j in range(0, left_gripper_all.shape[0]):
 
-            pointcloud = pointcloud_all[j]
+            # pointcloud = pointcloud_all[j]
             joint_state = vector_all[j]
 
-            head_img_bit = image_dict_all["head_camera"][j]
+            # head_img_bit = image_dict_all["head_camera"][j]
+
+            third_view_bit = image_dict_all["third_view"][j]
+
 
             if j != left_gripper_all.shape[0] - 1:
-                point_cloud_arrays.append(pointcloud)
+                # point_cloud_arrays.append(pointcloud)
                 state_arrays.append(joint_state)
-                head_img = cv2.imdecode(np.frombuffer(head_img_bit, np.uint8), cv2.IMREAD_COLOR)
+                # head_img = cv2.imdecode(np.frombuffer(head_img_bit, np.uint8), cv2.IMREAD_COLOR)
+
+                head_img = cv2.imdecode(np.frombuffer(third_view_bit, np.uint8), cv2.IMREAD_COLOR)
+
                 head_camera_arrays.append(head_img)
             if j != 0:
                 joint_action_arrays.append(joint_state)
@@ -113,7 +128,7 @@ def main():
     try:
         episode_ends_arrays = np.array(episode_ends_arrays)
         state_arrays = np.array(state_arrays)
-        point_cloud_arrays = np.array(point_cloud_arrays)
+        # point_cloud_arrays = np.array(point_cloud_arrays)
         joint_action_arrays = np.array(joint_action_arrays)
         head_camera_arrays = np.array(head_camera_arrays)
         head_camera_arrays = np.moveaxis(head_camera_arrays, -1, 1)  # NHWC -> NCHW
@@ -121,7 +136,7 @@ def main():
         compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=1)
         state_chunk_size = (100, state_arrays.shape[1])
         joint_chunk_size = (100, joint_action_arrays.shape[1])
-        point_cloud_chunk_size = (100, point_cloud_arrays.shape[1])
+        # point_cloud_chunk_size = (100, point_cloud_arrays.shape[1])
         head_camera_chunk_size = (100, *head_camera_arrays.shape[1:])
         
         zarr_data.create_dataset(
@@ -131,13 +146,13 @@ def main():
             overwrite=True,
             compressor=compressor,
         )
-        zarr_data.create_dataset(
-            "point_cloud",
-            data=point_cloud_arrays,
-            chunks=point_cloud_chunk_size,
-            overwrite=True,
-            compressor=compressor,
-        )
+        # zarr_data.create_dataset(
+        #     "point_cloud",
+        #     data=point_cloud_arrays,
+        #     chunks=point_cloud_chunk_size,
+        #     overwrite=True,
+        #     compressor=compressor,
+        # )
         zarr_data.create_dataset(
             "state",
             data=state_arrays,
