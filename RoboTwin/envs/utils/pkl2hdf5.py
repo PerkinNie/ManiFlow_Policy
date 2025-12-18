@@ -81,7 +81,32 @@ def pkl_files_to_hdf5_and_video(pkl_files, hdf5_path, video_path):
         pkl_file = load_pkl_file(pkl_file_path)
         append_data_to_structure(data_list, pkl_file)
 
-    images_to_video(np.array(data_list["observation"]["head_camera"]["rgb"]), out_path=video_path)
+    # images_to_video(np.array(data_list["observation"]["head_camera"]["rgb"]), out_path=video_path)
+
+    print("data_list顶层键：", list(data_list.keys()))  # 包含third_view_rgb
+    print("third_view_rgb列表长度：", len(data_list["third_view_rgb"]))  # 等于pkl文件数量
+    print("单帧形状：", data_list["third_view_rgb"][0].shape)  # (480,640,3)
+    print("合并后数组形状：", np.array(data_list["third_view_rgb"]).shape)
+    try:
+        print(f"现在开始使用转换第三人称相机图像为视频")
+        rgb_frames = np.array(data_list["third_view_rgb"])
+        print(f"third_view_rgb 数组维度：{len(rgb_frames.shape)}，形状：{rgb_frames.shape}")      
+        images_to_video(rgb_frames, out_path=video_path)
+        print(f"✅ 第三人称视频生成成功：{video_path}")
+    except KeyError as e:
+        print(f"❌ 未找到 third_view_rgb 键：{e}")
+        try:
+            print(f"现在开始使用转换头部相机图像为视频")
+            rgb_frames = np.array(data_list["observation"]["head_camera"]["rgb"])
+            images_to_video(rgb_frames, out_path=video_path)
+        except KeyError as e2:
+            print(f"❌ 未找到 head_camera 键：{e2}")
+            print(f"Warning: No RGB data (third_view_rgb/head_camera) found, skip video generation for {video_path}")
+            return
+    except Exception as e3:
+        # 捕获其他异常
+        print(f"❌ 视频生成失败：{e3}")
+        return
 
     with h5py.File(hdf5_path, "w") as f:
         create_hdf5_from_dict(f, data_list)
