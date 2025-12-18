@@ -87,7 +87,7 @@ else
     info "${CONDA_ENV}环境创建及基础依赖安装完成"
 fi
 
-# 3. 安装PyTorch3D（无论环境是否新建，确保依赖完整）
+# 3. 安装PyTorch3D
 info "===== 步骤3：安装PyTorch3D ====="
 pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable" --no-build-isolation || error "PyTorch3D安装失败"
 info "PyTorch3D安装完成"
@@ -103,7 +103,7 @@ info "RoboTwin2.0基础环境安装完成"
 
 # 5. 自动修改sapien/mplib/curobo代码
 info "===== 步骤5：修改sapien/mplib/curobo代码 ====="
-MODIFY_SCRIPT="${ROOT_DIR}/policy/ManiFlow/scripts/modify_code.sh"  # 若为绝对路径请修改此处
+MODIFY_SCRIPT="${ROOT_DIR}/RoboTwin/policy/ManiFlow/modify_code.sh"
 if [ -f "${MODIFY_SCRIPT}" ]; then
     bash "${MODIFY_SCRIPT}" || error "执行modify_code.sh失败"
     info "代码自动修改完成"
@@ -111,7 +111,7 @@ else
     warn "修改脚本不存在：${MODIFY_SCRIPT}，跳过此步骤"
 fi
 
-# 6. 安装ManiFlow包（步骤6缺失，忽略）
+# 6. 安装ManiFlow包
 info "===== 步骤6：安装ManiFlow包 ====="
 check_dir "${ROOT_DIR}/RoboTwin/policy/ManiFlow/ManiFlow"
 cd "${ROOT_DIR}/RoboTwin/policy/ManiFlow/ManiFlow" || error "进入ManiFlow目录失败"
@@ -121,8 +121,8 @@ info "ManiFlow包安装完成"
 
 # 7. 安装第三方包
 info "===== 步骤7：安装第三方包 ====="
-check_dir "${ROOT_DIR}/RoboTwin/third_party"
-cd "${ROOT_DIR}/RoboTwin/third_party" || error "进入third_party目录失败"
+check_dir "${ROOT_DIR}/RoboTwin/policy/ManiFlow/third_party"
+cd "${ROOT_DIR}/RoboTwin/policy/ManiFlow/third_party" || error "进入third_party目录失败"
 
 # 安装gym-0.21.0
 check_dir "gym-0.21.0"
@@ -143,10 +143,10 @@ check_dir "mj_envs"
 pip install -e mj_envs/. || error "安装mj_envs失败"
 check_dir "mjrl"
 pip install -e mjrl/. || error "安装mjrl失败"
-cd ../ || error "返回third_party目录失败"
+cd .. || error "返回third_party目录失败"
 
 # 安装r3m
-rm -rf r3m || warn "删除原有r3m目录失败（非致命）"
+rm -rf r3m || warn "删除原有r3m目录失败"
 git clone https://github.com/facebookresearch/r3m.git || error "克隆r3m仓库失败"
 cd r3m || error "进入r3m目录失败"
 pip install -e . || error "安装r3m失败"
@@ -154,9 +154,10 @@ cd ../.. || error "返回RoboTwin根目录失败"
 info "第三方包安装完成"
 
 # 8. 修改mplib 0.2.1代码
+# 检查是否有执行的必要，可能与第5步重复
 info "===== 步骤8：修改mplib代码 ====="
-check_file "${ROOT_DIR}/RoboTwin/fix_mplib.py"
-python "${ROOT_DIR}/RoboTwin/fix_mplib.py" || error "执行fix_mplib.py失败"
+check_file "${ROOT_DIR}/fix_mplib.py"
+python "${ROOT_DIR}/fix_mplib.py" || error "执行fix_mplib.py失败"
 info "mplib代码修改完成"
 
 # ===================== 完成提示 =====================
