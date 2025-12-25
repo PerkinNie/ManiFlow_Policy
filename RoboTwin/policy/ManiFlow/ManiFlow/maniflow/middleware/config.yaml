@@ -1,0 +1,83 @@
+# Robot Middleware Configuration File
+# 机械臂配置，有序，支持多个机械臂
+arms:
+  right_arm:
+    enabled: true
+    base_topic: "/right_arm/manip_t/controller"
+    dof: 7
+  left_arm:
+    enabled: false
+    base_topic: "/left_arm/manip_t/controller"
+    dof: 7
+
+# 相机配置，有序，支持多个相机
+cameras:
+  front:
+    enabled: true
+    base_topic: "/embodied/head/manip_t/sensor/camera"
+    #base_topic: "/embodied/front/manip_t/sensor/camera"
+    streams:
+      rgb: true
+      depth: false  
+  wrist_right:
+    enabled: true
+    base_topic: "/right_arm/manip_t/sensor/camera"
+    streams:
+      rgb: true
+      depth: false
+  wrist_left:
+    enabled: false
+    base_topic: "/left_arm/manip_t/sensor/camera"
+    streams:
+      rgb: true
+      depth: false
+
+# Not applyed in communication， Just for replay
+buffers:
+  action_buffer_size: 200
+  state_buffer_size: 30
+  camera_buffer_size: 30
+
+sync:
+  block_timeout: 100.0
+  check_interval: 0.01
+  timestamp_tolerance: 0.0015
+  sync_target: "image"  # Union["qpos, "image"]
+
+# prompt: "grab the black cap of the water bottle and place it on the table."
+prompt: "The right arm of the robotic arm first flips the carton lid open an angle of around 90 degrees, and then the left arm takes over to lift the lid fully open."
+
+
+Evo-1:
+  server_url: "ws://10.111.144.11:8899"
+  num_episodes: 5
+  horizon: 50  # action horizon returned from policy
+  max_steps: 200  # max *send/receive* cycles per episode
+  log_save_dir: "./video_log_real"
+  seed: 42  # Origin of the world
+  write_logs: true  # False 时关闭所有写盘（csv/图片/视频）
+  # how many seconds to wait for action reply each step
+  action_timeout: 5.0
+  image_mask_len: 3
+  action_mask_len: 24
+  # whether to flip/rotate images for saving (customize to robot camera orientation)
+  rotate_for_save: true
+  send_freq: 20
+
+maniflow:
+  server_url: "ws://10.111.144.11:8899"
+  num_episodes: 5
+  horizon: 16  # action horizon returned from policy
+  max_steps: 200  # max *send/receive* cycles per episode
+  log_save_dir: "./video_log_real"
+  seed: 42  # Origin of the world
+  write_logs: true  # False 时关闭所有写盘（csv/图片/视频）
+  # how many seconds to wait for action reply each step
+  action_timeout: 5.0
+  image_mask_len: 3
+  action_mask_len: 24
+  # whether to flip/rotate images for saving (customize to robot camera orientation)
+  rotate_for_save: true
+  send_freq: 20
+  
+  
