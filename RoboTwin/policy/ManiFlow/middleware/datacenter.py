@@ -19,7 +19,7 @@ import atlas
 import link
 import numpy as np
 import yaml
-from config_loader import RobotTopicConfig, load_config
+
 from google.protobuf.json_format import MessageToDict
 from link._link import Node, RawPublisher, SImage, SubscriberBase
 from manip_shared_msg.base.effector_pb2 import EffectorCommand
@@ -28,7 +28,17 @@ from manip_shared_msg.base.joint_pb2 import Joints
 from manip_shared_msg.locomotion.robot_state_pb2 import RobotState
 from manip_shared_msg.locomotion.servo_effector_pb2 import ServoEffector
 from manip_shared_msg.locomotion.servo_joint_pb2 import ServoJoint
-from utils import now_ros_stamp
+
+import pathlib
+import sys
+import os
+ROOT_DIR = str(pathlib.Path(__file__).parent.parent.parent.parent)
+sys.path.append(ROOT_DIR)
+sys.path.append(os.path.join(ROOT_DIR, 'ManiFlow'))
+sys.path.append(os.path.join(ROOT_DIR, 'ManiFlow', 'ManiFlow'))
+sys.path.append(os.path.join(ROOT_DIR, 'ManiFlow', 'ManiFlow', 'maniflow'))
+from middleware.config_loader import RobotTopicConfig, load_config
+from middleware.utils import now_ros_stamp
 
 # ======================== 全局配置 & 日志 ========================
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s][%(name)s][%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")

@@ -116,9 +116,13 @@ class RobotRunner(BaseRunner):
         # run policy
         with torch.no_grad():
             obs_dict_input = {}  # flush unused keys
-            obs_dict_input['point_cloud'] = obs_dict['point_cloud'].unsqueeze(0)
+            # obs_dict_input['point_cloud'] = obs_dict['point_cloud'].unsqueeze(0)
+            # print(f"point_cloud shape: {obs_dict['point_cloud'].shape}")
+            # print(f"point_cloud: {obs_dict['point_cloud']}")
             obs_dict_input['head_cam'] = obs_dict['head_cam'].unsqueeze(0)
             obs_dict_input['agent_pos'] = obs_dict['agent_pos'].unsqueeze(0)
+            print(f"agent_pos shape: {obs_dict['agent_pos'].shape}")
+            print(f"agent_pos: {obs_dict['agent_pos']}")
             obs_dict_input['task_name'] = [self.task_name]
             action_dict = policy.predict_action(obs_dict_input)
             

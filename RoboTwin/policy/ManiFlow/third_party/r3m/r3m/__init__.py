@@ -69,9 +69,8 @@ def load_r3m(modelid):
     modelcfg = omegaconf.OmegaConf.load(configpath)
     cleancfg = cleanup_config(modelcfg)
     rep = hydra.utils.instantiate(cleancfg)
-    
     rep = torch.nn.DataParallel(rep)
-    r3m_state_dict = remove_language_head(torch.load(modelpath, map_location=torch.device(device))['r3m'])
+    r3m_state_dict = remove_language_head(torch.load(modelpath, map_location=torch.device(device), weights_only=True)['r3m'])
     rep.load_state_dict(r3m_state_dict)
     return rep
 

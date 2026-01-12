@@ -1,5 +1,12 @@
 # import packages and module here
+import os
 import sys
+import pathlib
+
+ROOT_DIR = str(pathlib.Path(__file__).parent.parent.parent)
+sys.path.append(ROOT_DIR)
+sys.path.append(os.path.join(ROOT_DIR, 'ManiFlow'))
+sys.path.append(os.path.join(ROOT_DIR, 'ManiFlow', 'maniflow'))
 
 import torch
 import sapien.core as sapien
@@ -32,10 +39,11 @@ from maniflow_policy import *
 
 def encode_obs(observation):  # Post-Process Observation
     obs = dict()
-    head_cam = (np.moveaxis(observation["observation"]["head_camera"]["rgb"], -1, 0) / 255)
+    # head_cam = (np.moveaxis(observation["observation"]["head_camera"]["rgb"], -1, 0) / 255)
+    head_cam = (np.moveaxis(observation['third_view_rgb'], -1, 0) / 255)
     obs['head_cam'] = head_cam
     obs['agent_pos'] = observation['joint_action']['vector']
-    obs['point_cloud'] = observation['pointcloud']
+    # obs['point_cloud'] = observation['pointcloud']
     return obs
 
 

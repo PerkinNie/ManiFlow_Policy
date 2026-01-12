@@ -437,9 +437,15 @@ class Base_Task(gym.Env):
     def get_obs(self):
         self._update_render()
         self.cameras.update_picture()
+        # pkl_dic = {
+        #     "observation": {},
+        #     "pointcloud": [],
+        #     "joint_action": {},
+        #     "endpose": {},
+        # }
+
         pkl_dic = {
             "observation": {},
-            "pointcloud": [],
             "joint_action": {},
             "endpose": {},
         }
@@ -493,9 +499,23 @@ class Base_Task(gym.Env):
             pkl_dic["joint_action"]["right_gripper"] = right_jointstate[-1]
             pkl_dic["joint_action"]["vector"] = np.array(left_jointstate + right_jointstate)
         # pointcloud
+        # print(f"self.data_type is {self.data_type}")
         if self.data_type.get("pointcloud", False):
+            pkl_dic["pointcloud"] = []
             pkl_dic["pointcloud"] = self.cameras.get_pcd(self.data_type.get("conbine", False))
 
+        # # 添加调试信息
+        # print(f"=== get_obs debug info ===")
+        # print(f"data_type config: {self.data_type}")
+        # print(f"pointcloud enabled: {self.data_type.get('pointcloud', False)}")
+        # print(f"pointcloud in result: {'pointcloud' in pkl_dic}")
+        # if 'pointcloud' in pkl_dic:
+        #     print(f"pointcloud type: {type(pkl_dic['pointcloud'])}")
+        #     if hasattr(pkl_dic['pointcloud'], '__len__'):
+        #         print(f"pointcloud length: {len(pkl_dic['pointcloud'])}")
+        # print(f"observation keys: {list(pkl_dic.keys())}")
+        # print(f"========================")
+        
         self.now_obs = deepcopy(pkl_dic)
         return pkl_dic
 
@@ -1482,7 +1502,8 @@ class Base_Task(gym.Env):
 
         eval_video_freq = 1  # fixed
         if (self.eval_video_path is not None and self.take_action_cnt % eval_video_freq == 0):
-            self.eval_video_ffmpeg.stdin.write(self.now_obs["observation"]["head_camera"]["rgb"].tobytes())
+            # self.eval_video_ffmpeg.stdin.write(self.now_obs["observation"]["head_camera"]["rgb"].tobytes())
+            self.eval_video_ffmpeg.stdin.write(self.now_obs['third_view_rgb'].tobytes())
 
         self.take_action_cnt += 1
         print(f"step: \033[92m{self.take_action_cnt} / {self.step_lim}\033[0m", end="\r")
@@ -1678,7 +1699,9 @@ class Base_Task(gym.Env):
                 self.eval_success = True
                 self.get_obs() # update obs
                 if (self.eval_video_path is not None):
-                    self.eval_video_ffmpeg.stdin.write(self.now_obs["observation"]["head_camera"]["rgb"].tobytes())
+                    # self.eval_video_ffmpeg.stdin.write(self.now_obs["observation"]["head_camera"]["rgb"].tobytes())
+                    self.eval_video_ffmpeg.stdin.write(self.now_obs['third_view_rgb'].tobytes())
+
                 return
 
         self._update_render()

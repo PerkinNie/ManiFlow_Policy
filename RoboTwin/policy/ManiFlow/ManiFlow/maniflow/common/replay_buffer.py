@@ -97,7 +97,13 @@ class ReplayBuffer:
         assert('meta' in root)
         assert('episode_ends' in root['meta'])
         for key, value in root['data'].items():
+            # print("--------------------------------------")
+            # print(f'Replay Buffer: {key}, shape {value.shape}, dtype {value.dtype}, range {value.min():.2f}~{value.max():.2f}')
+            # print(f"value.shape[0]: {value.shape[0]}, root['meta']['episode_ends'][-1]: {root['meta']['episode_ends'][-1]}")
+            
+            # assert(value.shape[0] == root['meta']['episode_ends'][-1] + 1)
             assert(value.shape[0] == root['meta']['episode_ends'][-1])
+
         self.root = root
     
     # ============= create constructors ===============

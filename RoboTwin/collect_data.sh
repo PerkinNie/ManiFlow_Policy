@@ -11,3 +11,7 @@ export CUDA_VISIBLE_DEVICES=${gpu_id}
 PYTHONWARNINGS=ignore::UserWarning \
 python script/collect_data.py $task_name $task_config
 rm -rf data/${task_name}/${task_config}/.cache
+
+# bash collect_data.sh beat_block_hammer efort_beat_block_hammer_head 100
+# cd policy/ManiFlow
+# bash process_data.sh beat_block_hammer efort_beat_block_hammer_head 100

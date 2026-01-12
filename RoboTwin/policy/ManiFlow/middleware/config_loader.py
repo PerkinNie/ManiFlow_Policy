@@ -209,12 +209,19 @@ _global_evo1_config: Evo1Config | None = None
 def load_config(yaml_path: Union[str, Path, dict]) -> RobotTopicConfig:
     """加载配置文件并设置为全局配置（同时加载 Evo1Config）"""
     global _global_config, _global_evo1_config
+    # import os
+    # print("当前运行目录:", yaml_path)
 
     if isinstance(yaml_path, dict):
         data = yaml_path
         _global_config = RobotTopicConfig.from_dict(data)
     else:
+        import os
+        # yaml_path = Path(yaml_path)
+
+        yaml_path = os.path.join(os.getcwd(), "maniflow", "middleware", yaml_path)
         yaml_path = Path(yaml_path)
+
         if not yaml_path.exists():
             raise FileNotFoundError(f"配置文件不存在: {yaml_path}")
         with open(yaml_path, "r", encoding="utf-8") as f:
@@ -222,10 +229,12 @@ def load_config(yaml_path: Union[str, Path, dict]) -> RobotTopicConfig:
         _global_config = RobotTopicConfig.from_dict(data)
 
     # 同时加载 Evo-1 配置
-    evo1_data = data.get("Evo-1", {})
+    # evo1_data = data.get("Evo-1", {})
+    # 同时加载 maniflow 配置
+    maniflow_data = data.get("Maniflow", {})
     prompt = _global_config.prompt
-    evo1_data["prompt"] = prompt  # 使用全局配置中的提示词
-    _global_evo1_config = Evo1Config.from_dict(evo1_data)
+    maniflow_data["prompt"] = prompt  # 使用全局配置中的提示词
+    _global_evo1_config = Evo1Config.from_dict(maniflow_data)
 
     return _global_config
 
@@ -245,6 +254,13 @@ def get_evo1_config() -> Evo1Config:
         load_config("config.yaml")
     return _global_evo1_config
 
+def get_maniflow_config() -> Evo1Config:
+    """获取 maniflow 评估配置（必须先调用 load_config）"""
+    print(f"getting maniflow config ……")
+    if _global_evo1_config is None:
+        logger.warning("配置未加载，正在加载默认配置 config.yaml")
+        load_config("config.yaml")
+    return _global_evo1_config
 
 def set_config(config: RobotTopicConfig) -> None:
     """手动设置全局配置"""
@@ -257,6 +273,10 @@ def set_evo1_config(config: Evo1Config) -> None:
     global _global_evo1_config
     _global_evo1_config = config
 
+def set_maniflow_config(config: Evo1Config) -> None:
+    """手动设置 maniflow 配置"""
+    global _global_evo1_config
+    _global_evo1_config = config
 
 def is_config_loaded() -> bool:
     """检查配置是否已加载"""

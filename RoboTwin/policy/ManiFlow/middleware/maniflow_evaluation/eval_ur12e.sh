@@ -7,14 +7,14 @@
 
 # efort task examples:
 # bash train_eval_robotwin2.sh blocks_ranking_size maniflow_image_timm_policy_robotwin2 efort 400 1207 0 0
-# bash train_eval_robotwin2.sh beat_block_hammer maniflow_image_timm_policy_robotwin2 efort_beat_block_hammer 100 1218 0 0
+# bash train_eval_robotwin2.sh beat_block_hammer maniflow_image_timm_policy_robotwin2 efort_beat_block_hammer 100 1218 0 1
 # bash train_eval_robotwin2.sh dual_arm_pick_box maniflow_image_timm_policy_robotwin2 efort 99 1222 0 0
-# efort_beat_block_hammer
 
-train=false 
+# bash middleware/maniflow_evaluation/eval_ur12e.sh dual_arm_pick_box maniflow_image_timm_policy_robotwin2 efort 99 1223 0 0
+
 eval=true
 train_task_config=${3} # setting for training, demo_clean or demo_randomized, add here for clarity
-eval_task_config=efort_beat_block_hammer # setting for evaluation, demo_clean or demo_randomized
+eval_task_config=efort # setting for evaluation, demo_clean or demo_randomized
 
 policy_name=ManiFlow
 task_name=${1}
@@ -26,18 +26,6 @@ seed=${6}
 gpu_id=${7}
 ckpt_setting=${task_config}
 eval_seed=0 # seed for evaluation, can be changed to 1, 2, etc.
-
-if [ "$train" = true ]; then
-    echo "Training is enabled."
-    if [ ! -d "./data/${task_name}-${task_config}-${expert_data_num}.zarr" ]; then
-        bash process_data.sh ${task_name} ${task_config} ${expert_data_num}
-    fi
-    bash scripts/train_policy.sh ${alg_name} ${task_name} ${task_config} ${expert_data_num} ${addition_info} ${seed} ${gpu_id}
-else
-    echo "Training is disabled."
-fi
-
-
 
 # if eval is false, skip evaluation
 if [ "$eval" = false ]; then
@@ -53,18 +41,22 @@ export CUDA_VISIBLE_DEVICES=${gpu_id}
 export HYDRA_FULL_ERROR=1
 echo -e "\033[33mgpu id (to use): ${gpu_id}\033[0m"
 
-cd ../.. # move to root
+cd middleware/maniflow_evaluation/
 
 PYTHONWARNINGS=ignore::UserWarning \
-python script/eval_policy.py --config policy/$policy_name/deploy_policy.yml \
-    --overrides \
-    --config_name ${alg_name} \
-    --task_name ${task_name} \
-    --task_config ${eval_task_config} \
-    --ckpt_setting ${ckpt_setting} \
-    --expert_data_num ${expert_data_num} \
-    --training_seed ${seed} \
-    --seed ${eval_seed} \
-    --policy_name ${policy_name} \
-    --addition_info ${addition_info} \
-    --alg_name ${alg_name}
+# python maniflow_eval.py --config policy/$policy_name/deploy_policy.yml \
+python maniflow_eval.py 
+
+# --config-path ./ \
+#     --config-name ${alg_name}.yml 
+#         # 3. 自定义参数覆盖：直接写 键=值（无 -- 前缀！）
+#     # config_name=${alg_name} \
+#     task_name=${task_name} \
+#     task_config=${task_config} \
+#     ckpt_setting=${ckpt_setting} \
+#     expert_data_num=${expert_data_num} \
+#     training_seed=${seed} \
+#     seed=${eval_seed} \
+#     policy_name=${policy_name} \
+#     addition_info=${addition_info} \
+#     alg_name=${alg_name}

@@ -90,14 +90,14 @@ class TimmObsEncoder(ModuleAttrMixin):
             # model = load_r3m("resnet18", pretrained=pretrained) # resnet18, resnet34
 
             # change model params
-            model = load_r3m("resnet18")
+            model = load_r3m("resnet18")    # 带有预训练权重
             if torch.cuda.is_available():
                 if isinstance(model, nn.DataParallel):
                     model.module = model.module.to("cuda:0")
                 model = model.to("cuda:0")
             # -------------------
 
-            model.eval()
+            model.eval()    # 切换模型至评估模式
             cprint(f"Loaded R3M model using {model_name}. pretrained={pretrained}", 'green')
         else:
             model = timm.create_model(
@@ -326,7 +326,9 @@ class TimmObsEncoder(ModuleAttrMixin):
             else:
                 target_device = next(model.parameters()).device
             img = self.key_transform_map[key](img).to(target_device)
-            raw_feature = model(img).to(target_device)
+            model = model.module
+            model = model.to(target_device)
+            raw_feature = model(img)
             # -------------
 
             feature = self.aggregate_feature(raw_feature)

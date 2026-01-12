@@ -13,7 +13,18 @@ import maniflow.common.logger_util as logger_util
 from queue import deque
 from termcolor import cprint
 from maniflow.middleware.utils import datacenter_obs_to_maniflow
+from maniflow.middleware.datacenter import InteractionDataCenter
 
+def init_logger():
+    logger = logging.getLogger("ImgPubNode")  # 创建logger实例
+    logger.setLevel(logging.INFO)  # 设置日志级别
+    # 配置控制台输出格式
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logger.addHandler(handler)
+    return logger
+
+logger = init_logger()
 
 class OpenmindRunner(BaseRunner):
     def __init__(self,
@@ -130,22 +141,21 @@ class OpenmindRunner(BaseRunner):
         np_action_dict = dict_apply(action_dict, lambda x: x.detach().to('cpu').numpy())
         action = np_action_dict['action'].squeeze(0)
         return action
-    
 
-    def run(self, policy: BasePolicy, datacenter: InteractionDataCenter):
+    def run(self, policy: BasePolicy, datacenter: InteractionDataCenter, ep_idx: int, max_steps: int):
         logger.info(f"正在推理第 {ep_idx + 1} 个Epoch...")
         try:
             for step_idx in range(max_steps):
                 input("等待用户确认请求推理")
                 raw_obs = datacenter.get_observation()
                 if not raw_obs:
-                    cprint(f"❌ 第{episode_idx+1}轮第{step_idx}步：获取观测失败，终止本轮", "red")
+                    cprint(f"❌ 第{ep_idx+1}轮第{step_idx}步：获取观测失败，终止本轮", "red")
                     break
 
                 try:
                     policy_obs = datacenter_obs_to_maniflow(raw_obs)
                 except Exception as e:
-                    cprint(f"❌ 第{episode_idx+1}轮第{step_idx}步：观测格式转换失败 - {str(e)}", "red")
+                    cprint(f"❌ 第{ep_idx+1}轮第{step_idx}步：观测格式转换失败 - {str(e)}", "red")
                     break
 
                 self.update_obs(policy_obs)
@@ -154,7 +164,7 @@ class OpenmindRunner(BaseRunner):
                 try:
                     action = self.get_action(policy)
                 except Exception as e:
-                    cprint(f"❌ 第{episode_idx+1}轮第{step_idx}步：模型推理失败 - {str(e)}", "red")
+                    cprint(f"❌ 第{ep_idx+1}轮第{step_idx}步：模型推理失败 - {str(e)}", "red")
                     break
 
                 # 5. 发布动作到机器人
@@ -176,7 +186,7 @@ class OpenmindRunner(BaseRunner):
                     #     publish_action = np.concatenate([publish_action[: evo1_config.arm_dof], [0.0]])
                     # else:
                     #     publish_action = np.concatenate([publish_action[: evo1_config.arm_dof], [1.0]])
-                    logger.info(f"发布动作 第{h}步：{publish_action} 总共{action_arr.shape[0]} 步")
+                    logger.info(f"发布动作 第{h}步：{publish_action} 总共{action.shape[0]} 步")
                     input("等待用户确认再次发布动作")
                     next_obs = self.datacenter.step(publish_action)
                     if not next_obs:

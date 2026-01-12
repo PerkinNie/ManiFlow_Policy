@@ -152,6 +152,13 @@ class ManiFlowTransformerImagePolicy(BasePolicy):
         obs_dict: must include "obs" key
         result: must include "action" key
         """
+        # 添加调试信息查看输入到模型的观测数据
+        print("=== 模型输入观测数据 ===")
+        print(f"输入观测字典键: {list(obs_dict.keys())}")
+        for key, value in obs_dict.items():
+                print(f"{key}: {value}")
+        print("=====================\n")
+
         # normalize input
         nobs = self.normalizer.normalize(obs_dict)
         

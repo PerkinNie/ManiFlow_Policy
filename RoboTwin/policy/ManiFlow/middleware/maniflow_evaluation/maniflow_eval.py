@@ -51,20 +51,14 @@ sys.path.append('ManiFlow/maniflow')
 
 from hydra.core.hydra_config import HydraConfig
 from maniflow.policy.maniflow_image_policy import ManiFlowTransformerImagePolicy
-from maniflow.dataset.base_dataset import BaseDataset
-from maniflow.env_runner.robot_runner import RobotRunner
 from maniflow.env_runner.openmind_runner import OpenmindRunner
-from maniflow.common.checkpoint_util import TopKCheckpointManager
-from maniflow.common.pytorch_util import dict_apply, optimizer_to
-from maniflow.model.diffusion.ema_model import EMAModel
-from maniflow.model.common.lr_scheduler import get_scheduler
-
-from config_loader import ArmConfig, CameraConfig, get_config, get_evo1_config
-from datacenter import InteractionDataCenter
-from utils import datacenter_obs_to_evo1, save_video
+from maniflow.middleware.config_loader import get_config, get_maniflow_config
+from maniflow.middleware.datacenter import InteractionDataCenter
+from maniflow.middleware.utils import datacenter_obs_to_evo1, save_video
 
 ARM_TOPICS = []
 CAMERA_TOPICS = []
+maniflow_config = get_maniflow_config()
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
@@ -79,7 +73,7 @@ class TrainManiFlowRoboTwinWorkspace:
         self._saving_thread = None
         
         # set seed
-        seed = cfg.training.seed
+        seed = 42
         torch.manual_seed(seed)
         np.random.seed(seed)
         random.seed(seed)
@@ -93,8 +87,10 @@ class TrainManiFlowRoboTwinWorkspace:
             except: # minkowski engine could not be copied. recreate it
                 self.ema_model = hydra.utils.instantiate(cfg.policy)
 
-    def eval(self, mode='best'):
+    # def eval(self, num_episodes: int = maniflow_config.num_episodes, max_steps: int = maniflow_config.max_steps, mode='best'):
+    def eval(self, num_episodes: int = 5, max_steps: int = 200, mode='best'):
         # load the latest checkpoint
+        print("Entered maniflow real machine eval stage.")
         cfg = copy.deepcopy(self.cfg)
         
         lastest_ckpt_path = self.get_checkpoint_path(tag=mode, monitor_key=cfg.checkpoint.topk.monitor_key)
@@ -111,10 +107,10 @@ class TrainManiFlowRoboTwinWorkspace:
 
         # configure env
         env_runner = OpenmindRunner(
-            output_dir=output_dir,
+            output_dir=self.output_dir,
             n_obs_steps=n_obs_steps, 
             n_action_steps=n_action_steps)
-        self._output_dir = output_dir # recover output_dir
+        self._output_dir = self.output_dir # recover output_dir
         
         policy = self.model
         datacenter = self.datacenter
@@ -124,67 +120,15 @@ class TrainManiFlowRoboTwinWorkspace:
         policy.eval()
         policy.cuda()
 
-        # inference_steps = cfg.policy.num_inference_steps
-        all_rollout_steps = [10] # [10, 1, 4, 2, 8]
-        for inference_steps in all_rollout_steps:
-            eval_episodes = cfg.robotwin_task.env_runner.eval_episodes
-            cprint(f"Running evaluation for {inference_steps} inference steps", 'magenta')
+        for episode in num_episodes:
+            cprint(f"Running evaluation for {episode} inference steps", 'magenta')
 
             horizon = policy.horizon
             n_action_steps = policy.n_action_steps
-            cprint(f"Evaluating with horizon={horizon}, n_action_steps={n_action_steps}, eval_episodes={eval_episodes}, inference_steps={inference_steps}", 'magenta')
+            cprint(f"Evaluating with horizon={horizon}, n_action_steps={n_action_steps}, inference_steps={episode}", 'magenta')
 
-            # Create eval results directory
-            eval_dir = os.path.join(self.output_dir, f'eval_results/{self.epoch}/eval_{eval_episodes}_episodes/horizon{horizon}_act{n_action_steps}/{inference_steps}')
-            os.makedirs(eval_dir, exist_ok=True)
-
-            policy.num_inference_steps = inference_steps
-            runner_log = env_runner.run(policy, datacenter)
-
-            # cprint(f"---------------- Eval Results --------------", 'magenta')
-            # metrics_dict = {}
-            # for key, value in runner_log.items():
-            #     if isinstance(value, float):
-            #         metrics_dict[key] = value
-            #         cprint(f"{key}: {value:.4f}", 'magenta')
-            #     if isinstance(value, dict):
-            #         for k, v in value.items():
-            #             if isinstance(v, float):
-            #                 metrics_dict[f"{key}/{k}"] = v
-            #                 cprint(f"{key}/{k}: {v:.4f}", 'magenta')
-            
-            # # Save metrics to JSON
-            # import json
-            # metrics_path = os.path.join(eval_dir, f'metrics_{mode}_{self.epoch}.json')
-            # with open(metrics_path, 'w') as f:
-            #     json.dump(metrics_dict, f, indent=4)
-            
-            # # Save videos if they exist in runner_log
-            # runner_log.pop('average_success_rate', None) # Remove average_success_rate from runner_log
-            # video_id = 0
-            # task_name = runner_log['task_name']
-            # for k, v in runner_log.items():
-            #     if 'video' in k:
-            #         if isinstance(v, np.ndarray):
-            #             video_dir = os.path.join(eval_dir, 'videos', task_name)
-            #             os.makedirs(video_dir, exist_ok=True)
-            #             video_path = os.path.join(video_dir, f'{k}_{mode}_{self.epoch}_{video_id}.mp4')
-                        
-            #             # Convert from N, C, H, W to N, H, W, C format for saving
-            #             v = np.transpose(v, (0, 2, 3, 1))
-            #             # Save video using imageio or cv2
-            #             import imageio
-            #             imageio.mimsave(video_path, v, fps=10)
-            #         elif hasattr(v, '_path'):  # Handle wandb.Video object
-            #             video_dir = os.path.join(eval_dir, 'videos', task_name)
-            #             os.makedirs(video_dir, exist_ok=True)
-            #             video_path = os.path.join(video_dir, f'{k}_{mode}_{self.epoch}_{video_id}.mp4')
-            #             # Copy the video file from wandb path to our eval directory
-            #             shutil.copy2(v._path, video_path)
-            #         else:
-            #             cprint(f"Unknown video format for {k}", 'red')
-            #         video_id += 1
-            # cprint(f"Evaluation results saved to {eval_dir}", 'magenta')
+            # policy.num_inference_steps = inference_steps
+            runner_log = env_runner.run(policy, datacenter, episode, max_steps)
 
     @property
     def output_dir(self):
@@ -290,9 +234,17 @@ class TrainManiFlowRoboTwinWorkspace:
 
 @hydra.main(
     version_base=None,
-    config_path=str(pathlib.Path(__file__).parent.parent.parent.joinpath('config'))
+    config_path=str(pathlib.Path(__file__).parent.parent.parent.joinpath('config')),
+    config_name="maniflow_image_timm_policy_robotwin2.yaml"
 )
+
+# @hydra.main(
+#     version_base=None,
+#     config_path="/root/workspace/ManiFlow_Policy/RoboTwin/policy/ManiFlow/ManiFlow/maniflow/config",
+# )
+
 def main(cfg):
+    print(f"========")
     global ARM_TOPICS, CAMERA_TOPICS
 
     config = get_config()
@@ -302,10 +254,16 @@ def main(cfg):
     CAMERA_TOPICS = config.get_ava_cameras()
     datacenter.start()
 
+    print("Loading Maniflow model...")
     workspace = TrainManiFlowRoboTwinWorkspace(cfg, datacenter)
-    workspace.eval()
+    print("Loaded maniflow model!")
+    # workspace = TrainManiFlowRoboTwinWorkspace(cfg)
+    # workspace.eval()
+    workspace.eval(maniflow_config.num_episodes, maniflow_config.max_steps)
 
     # datacenter.stop()
 
 if __name__ == "__main__":
+    print(f"顺利进入 maniflow_eval 脚本")
+    print(str(pathlib.Path(__file__).parent.parent.parent.joinpath('config')))
     main()

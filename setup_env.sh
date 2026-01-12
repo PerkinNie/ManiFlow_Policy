@@ -8,7 +8,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'  # 重置颜色
 
 # Conda环境名
-CONDA_ENV="maniflow"
+CONDA_ENV="maniflow_env"
 # RoboTwin根目录（请确保脚本在该目录下执行，或修改为绝对路径）
 ROOT_DIR=$(pwd)
 
@@ -49,12 +49,21 @@ info "Vulkan依赖安装完成"
 
 # 检查conda是否安装
 info "===== 检查Conda环境 ====="
-if ! command -v conda &> /dev/null; then
+if ! command -v conda >/dev/null 2>&1; then
     error "未检测到conda！请先安装Anaconda/Miniconda并配置环境变量"
+else
+    info "Conda已安装，路径：$(command -v conda)"
+    # 可选：验证conda是否能正常执行
+    conda --version >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        info "Conda版本：$(conda --version)"
+    else
+        error "Conda路径存在但无法执行，请检查Conda安装完整性"
+    fi
 fi
 
-conda init bash
-exec bash
+# conda init bash
+# exec bash
 
 # 初始化conda（解决脚本中conda activate失效问题）
 CONDA_BASE=$(conda info --base)
@@ -70,7 +79,7 @@ if conda info --envs | grep -q "^${CONDA_ENV}\s"; then
     info "📌 当前激活的conda环境：${CONDA_ENV}"
     info "📌 Python版本：$(python --version | awk '{print $2}')"
     info "======================================"
-    exit 0  # 退出脚本，不执行后续步骤
+    # exit 0  # 退出脚本，不执行后续步骤
 else
     info "未检测到${CONDA_ENV}环境，开始创建"
     
@@ -97,8 +106,8 @@ info "===== 步骤4：安装RoboTwin2.0基础环境 ====="
 cd "${ROOT_DIR}/RoboTwin" || error "返回RoboTwin根目录失败"
 check_file "script/_install.sh"
 bash script/_install.sh || error "执行_install.sh失败"
-check_file "script/_download_assets.sh"
-bash script/_download_assets.sh || error "执行_download_assets.sh失败"
+# check_file "script/_download_assets.sh"
+# bash script/_download_assets.sh || error "执行_download_assets.sh失败"
 info "RoboTwin2.0基础环境安装完成"
 
 # 5. 自动修改sapien/mplib/curobo代码
@@ -124,33 +133,49 @@ info "===== 步骤7：安装第三方包 ====="
 check_dir "${ROOT_DIR}/RoboTwin/policy/ManiFlow/third_party"
 cd "${ROOT_DIR}/RoboTwin/policy/ManiFlow/third_party" || error "进入third_party目录失败"
 
+# 定义安装包的函数
+install_package() {
+    local package_name="$1"
+    check_dir "$package_name"
+    cd "$package_name" || error "进入$package_name目录失败"
+    pip install -e . || error "安装$package_name失败"
+    cd .. || error "返回third_party目录失败"
+}
+
+install_package_with_subdirs() {
+    local package_name="$1"
+    local subdir1="$2"
+    local subdir2="$3"
+    check_dir "$package_name"
+    cd "$package_name" || error "进入$package_name目录失败"
+    check_dir "$subdir1"
+    pip install -e ${subdir1}/. || error "安装${subdir1}失败"
+    check_dir "$subdir2"
+    pip install -e ${subdir2}/. || error "安装${subdir2}失败"
+    cd .. || error "返回third_party目录失败"
+}
+
+install_package_from_git() {
+    local package_name="$1"
+    local git_url="$2"
+    rm -rf "$package_name" || warn "删除原有$package_name目录失败"
+    git clone "$git_url" || error "克隆$package_name仓库失败"
+    cd "$package_name" || error "进入$package_name目录失败"
+    pip install -e . || error "安装$package_name失败"
+    cd .. || error "返回third_party目录失败"
+}
+
 # 安装gym-0.21.0
-check_dir "gym-0.21.0"
-cd gym-0.21.0 || error "进入gym-0.21.0目录失败"
-pip install -e . || error "安装gym-0.21.0失败"
-cd .. || error "返回third_party目录失败"
+install_package "gym-0.21.0"
 
 # 安装Metaworld
-check_dir "Metaworld"
-cd Metaworld || error "进入Metaworld目录失败"
-pip install -e . || error "安装Metaworld失败"
-cd .. || error "返回third_party目录失败"
+install_package "Metaworld"
 
 # 安装rrl-dependencies
-check_dir "rrl-dependencies"
-cd rrl-dependencies || error "进入rrl-dependencies目录失败"
-check_dir "mj_envs"
-pip install -e mj_envs/. || error "安装mj_envs失败"
-check_dir "mjrl"
-pip install -e mjrl/. || error "安装mjrl失败"
-cd .. || error "返回third_party目录失败"
+install_package_with_subdirs "rrl-dependencies" "mj_envs" "mjrl"
 
 # 安装r3m
-rm -rf r3m || warn "删除原有r3m目录失败"
-git clone https://github.com/facebookresearch/r3m.git || error "克隆r3m仓库失败"
-cd r3m || error "进入r3m目录失败"
-pip install -e . || error "安装r3m失败"
-cd ../.. || error "返回RoboTwin根目录失败"
+install_package_from_git "r3m" "https://github.com/facebookresearch/r3m.git"
 info "第三方包安装完成"
 
 # 8. 修改mplib 0.2.1代码
